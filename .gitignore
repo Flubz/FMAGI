@@ -184,6 +184,7 @@ Engine/Source/Programs/AutomationTool/BuildGraph/BuildGraph.Automation.xml
 /Engine/DerivedDataCache/**
 
 # Ignore intermediate folders
+Binaries/*
 Intermediate/
 obj/
 
