@@ -28,5 +28,7 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 	bool UpdatePosition();
 	void GenerateChunk();
+	void RemoveChunk();
+	bool CheckRadius(float x_, float y_);
 
 };

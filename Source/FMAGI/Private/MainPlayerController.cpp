@@ -12,6 +12,7 @@ void AMainPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	UpdatePosition();
+	RemoveChunk();
 	GenerateChunk();
 }
 
@@ -37,10 +38,8 @@ bool AMainPlayerController::UpdatePosition()
 void AMainPlayerController::GenerateChunk()
 {
 	FActorSpawnParameters spawnParams = FActorSpawnParameters();
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	FRotator rot = FRotator(0, 0, 0);
 	FVector spawnPos = FVector(0, 0, 0);
-	FVector2D chunkPos = FVector2D();
+	FVector2D chunkPos = FVector2D(0, 0);
 
 	for (int x = -_renderRange; x <= _renderRange; x++)
 	{
@@ -48,13 +47,33 @@ void AMainPlayerController::GenerateChunk()
 		{
 			chunkPos.X = _chunkX + x;
 			chunkPos.Y = _chunkY + y;
-			if (!_chunksCords.Contains(chunkPos))
-			{
-				_chunksCords.Add(chunkPos);
-				spawnPos = FVector(chunkPos.X * _chunkSize, chunkPos.Y  * _chunkSize, 0);
-				AActor* chunk = GetWorld()->SpawnActor<AActor>(_chunk, spawnPos, rot, spawnParams);
-				_chunks.Add(chunk);
-			}
+			spawnPos = FVector(chunkPos.X * _chunkSize, chunkPos.Y * _chunkSize, 0);
+
+			if (!CheckRadius(spawnPos.X + _chunkSizeHalf, spawnPos.Y + _chunkSizeHalf)) continue;
+			if (_chunksCords.Contains(chunkPos)) continue;
+
+			_chunksCords.Add(chunkPos);
+			AActor* chunk = GetWorld()->SpawnActor<AActor>(_chunk, spawnPos, FRotator(0, 0, 0), spawnParams);
+			_chunks.Add(chunk);
 		}
 	}
+}
+
+void AMainPlayerController::RemoveChunk()
+{
+	for (int i = 0; i < _chunksCords.Num(); i++)
+	{
+		float x = (_chunksCords[i].X * _chunkSize + _chunkSizeHalf);
+		float y = (_chunksCords[i].Y * _chunkSize + _chunkSizeHalf);
+		if (CheckRadius(x, y)) continue;
+		_chunksCords.RemoveAt(i);
+		GetWorld()->DestroyActor(_chunks[i]);
+		_chunks.RemoveAt(i);
+	}
+}
+
+bool AMainPlayerController::CheckRadius(float x_, float y_)
+{
+	FVector vec = ((FVector(x_, y_, 0)) - _characterPosition);
+	return (vec.Size() < ((float) _chunkSize * (float) _renderRange));
 }
