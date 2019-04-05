@@ -5,7 +5,7 @@ void AMainPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	_chunkSize = _chunkLineElement * _voxelSize;
-	_chunkSizeHalf = _chunkSize / 2;
+	_chunkSizeHalf = _chunkSize / 1;
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
@@ -17,10 +17,12 @@ void AMainPlayerController::Tick(float DeltaTime)
 
 bool AMainPlayerController::UpdatePosition()
 {
-	FVector pos = GetPawn()->GetActorLocation() * FVector(1, 1, 0);
-	_characterPosition = pos;
+	FVector charPos = GetPawn()->GetActorLocation() * FVector(1, 1, 0);
+	_characterPosition = charPos;
 
-	FVector2D flooredPos = FVector2D(UKismetMathLibrary::FFloor(pos.X / (float) _chunkSizeHalf), UKismetMathLibrary::FFloor(pos.Y / (float) _chunkSizeHalf));
+	FVector2D flooredPos = FVector2D(
+		UKismetMathLibrary::FFloor(charPos.X / (float) _chunkSizeHalf),
+		UKismetMathLibrary::FFloor(charPos.Y / (float) _chunkSizeHalf));
 
 	if (flooredPos.X != _chunkX || flooredPos.Y != _chunkY)
 	{
