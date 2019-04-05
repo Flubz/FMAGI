@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "ProceduralMeshComponent.h"
+#include "KismetProceduralMeshLibrary.h"
 #include "MeshGenerator.generated.h"
 
 UCLASS()
@@ -20,10 +21,15 @@ protected:
 		UProceduralMeshComponent* _thisMesh;
 
 	UPROPERTY(Category = MeshGeneration, EditAnywhere, BlueprintReadWrite)
-		FVector _cubeRadius = FVector(100, 100, 100);
+		int _quadSize = 100;
+
+	UPROPERTY(Category = MeshGeneration, EditAnywhere, BlueprintReadWrite)
+		bool _winding = true;
 
 	virtual void PostActorCreated() override;
 	void GenerateMesh();
+
+	UFUNCTION(BlueprintCallable) void GenerateMeshGrid();
 
 protected:
 	void AddTriangleMesh(FVector topRight_, FVector bottomRight_, FVector bottomLeft_, int32& triIndex_, FProcMeshTangent tangent_);

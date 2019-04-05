@@ -14,7 +14,7 @@ AMeshGenerator::AMeshGenerator()
 void AMeshGenerator::PostActorCreated()
 {
 	Super::PostActorCreated();
-	GenerateMesh();
+	// GenerateMesh();
 }
 
 void AMeshGenerator::GenerateMesh()
@@ -26,15 +26,21 @@ void AMeshGenerator::GenerateMesh()
 	FVector definedShape[4];
 	FProcMeshTangent tangentSetup;
 
-	definedShape[0] = FVector(_cubeRadius.X, _cubeRadius.Y, _cubeRadius.Z);
-	definedShape[1] = FVector(_cubeRadius.X, _cubeRadius.Y, -_cubeRadius.Z);
-	definedShape[2] = FVector(_cubeRadius.X, -_cubeRadius.Y, _cubeRadius.Z);
-	definedShape[3] = FVector(_cubeRadius.X, -_cubeRadius.Y, -_cubeRadius.Z);
+	definedShape[0] = FVector(0, 0, 0);
+	definedShape[1] = FVector(0, 1 * _quadSize, 0);
+	definedShape[2] = FVector(1 * _quadSize, 0, 0);
+	definedShape[3] = FVector(1 * _quadSize, 1 * _quadSize, 0);
 
 	tangentSetup = FProcMeshTangent(0, 1, 0);
 	AddQuadMesh(definedShape[0], definedShape[1], definedShape[2], definedShape[3], triangleIndexCount, tangentSetup);
 
 	_meshProperties->CreateMesh(0, _thisMesh, true);
+}
+
+void AMeshGenerator::GenerateMeshGrid()
+{
+	TArray<int32>* _triangles = new TArray<int32>();
+	CreateGridMeshTriangles(_quadSize, _quadSize, _winding, _triangles);
 }
 
 void AMeshGenerator::AddTriangleMesh(FVector topRight_, FVector bottomRight_, FVector bottomLeft_, int32 & triIndex_, FProcMeshTangent tangent_)
