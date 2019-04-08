@@ -13,7 +13,7 @@ void AMainPlayerController::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	UpdatePosition();
 	RemoveChunk();
-	GenerateChunk();
+	AddChunk();
 }
 
 bool AMainPlayerController::UpdatePosition()
@@ -35,7 +35,7 @@ bool AMainPlayerController::UpdatePosition()
 	return false;
 }
 
-void AMainPlayerController::GenerateChunk()
+void AMainPlayerController::AddChunk()
 {
 	FActorSpawnParameters spawnParams = FActorSpawnParameters();
 	FVector spawnPos = FVector(0, 0, 0);
@@ -53,7 +53,8 @@ void AMainPlayerController::GenerateChunk()
 			if (_chunksCords.Contains(chunkPos)) continue;
 
 			_chunksCords.Add(chunkPos);
-			AActor* chunk = GetWorld()->SpawnActor<AActor>(_chunk, spawnPos, FRotator(0, 0, 0), spawnParams);
+			AVoxel* chunk = GetWorld()->SpawnActor<AVoxel>(_chunk, spawnPos, FRotator(0, 0, 0), spawnParams);
+			chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y);
 			_chunks.Add(chunk);
 		}
 	}
