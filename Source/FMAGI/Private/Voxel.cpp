@@ -15,36 +15,27 @@ const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000), FVector(0.00000
 
 AVoxel::AVoxel()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 }
 
-void AVoxel::BeginPlay()
+void AVoxel::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform)
 {
-	Super::BeginPlay();
+	_chunkXIndex = chunkXIndex;
+	_chunkYIndex = chunkYIndex;
 
-}
-
-void AVoxel::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
-void AVoxel::OnConstruction(const FTransform & Transform)
-{
-	_chunkTotalElements = _chunkLineElements * _chunkLineElements * _chunkZElements;
 	_chunkLineElementsP2 = _chunkLineElements * _chunkLineElements;
-	_voxelSizeHalf = _voxelSize / 2.0f;
+	_chunkTotalElements = _chunkLineElementsP2 * _chunkZElements;
+	_voxelSizeHalf = _voxelSize / 2;
 
 	FString str = "Voxel_" + FString::FromInt(_chunkXIndex) + "_" + FString::FromInt(_chunkYIndex);
 	FName name = FName(*str);
+	SetActorLabel(str);
 	_proceduralMeshComponent = NewObject<UProceduralMeshComponent>(this, name);
 	_proceduralMeshComponent->RegisterComponent();
 
 	RootComponent = _proceduralMeshComponent;
-	RootComponent->SetWorldTransform((Transform));
-
-	Super::OnConstruction(Transform);
+	RootComponent->SetWorldTransform((spawnTransform));
 
 	GenerateChunk();
 	UpdateMesh();
@@ -54,6 +45,8 @@ void AVoxel::GenerateChunk()
 {
 	_chunkFields.SetNumUninitialized(_chunkTotalElements);
 
+	TArray<int32> noise = CalculateNoise();
+
 	for (int32 x = 0; x < _chunkLineElements; x++)
 	{
 		for (int32 y = 0; y < _chunkLineElements; y++)
@@ -61,10 +54,58 @@ void AVoxel::GenerateChunk()
 			for (int32 z = 0; z < _chunkZElements; z++)
 			{
 				int32 index = x + (y * _chunkLineElements) + (z * _chunkLineElementsP2);
-				_chunkFields[index] = (z < 30) ? 1 : 0;
+				_chunkFields[index] = z < _chunkZMaxHeight + noise[(y * _chunkLineElements) + x] ? 1 : 0;
 			}
 		}
 	}
+}
+
+TArray<int32> AVoxel::CalculateNoise()
+{
+	TArray<int32> noiseArray;
+	noiseArray.SetNum(_chunkLineElementsP2);
+
+	float cumulativeNoiseValue = 0.0f;
+	float xNoiseMult = 0.0f;
+	float yNoiseMult = 0.0f;
+	int32 val = 0.0f;
+
+	for (int x = 0; x < _chunkLineElements; x++)
+	{
+		for (int y = 0; y < _chunkLineElements; y++)
+		{
+			for (int o = 0; o < _octaves.Num(); o++)
+			{
+				float noiseValue = 0.0f;
+				xNoiseMult = ((_chunkXIndex * _chunkLineElements) + x) * _octaves[o]._xMult;
+				yNoiseMult = ((_chunkYIndex * _chunkLineElements) + y) * _octaves[o]._yMult;
+				GetNoiseValue(xNoiseMult, yNoiseMult, noiseValue);
+				noiseValue *= _octaves[o]._weight;
+				if (_octaves[o]._clamp)
+				{
+					noiseValue = FMath::Clamp(noiseValue, _octaves[o]._clampMin, _octaves[o]._clampMax);
+				}
+				cumulativeNoiseValue += noiseValue;
+			}
+
+			val = FMath::FloorToInt((cumulativeNoiseValue));
+			noiseArray[(y * _chunkLineElements) + x] = val;
+		}
+	}
+	return noiseArray;
+}
+
+void AVoxel::SetVerticies(int32 xVS, int32 yVS, int32 zVS, TArray<FVector>& verticies, bool posArray[])
+{
+	verticies.Add(FVector(GetVoxelSizeHalf(0, posArray) + (xVS), GetVoxelSizeHalf(1, posArray) + (yVS), GetVoxelSizeHalf(2, posArray) + (zVS)));
+	verticies.Add(FVector(GetVoxelSizeHalf(3, posArray) + (xVS), GetVoxelSizeHalf(4, posArray) + (yVS), GetVoxelSizeHalf(5, posArray) + (zVS)));
+	verticies.Add(FVector(GetVoxelSizeHalf(6, posArray) + (xVS), GetVoxelSizeHalf(7, posArray) + (yVS), GetVoxelSizeHalf(8, posArray) + (zVS)));
+	verticies.Add(FVector(GetVoxelSizeHalf(9, posArray) + (xVS), GetVoxelSizeHalf(10, posArray) + (yVS), GetVoxelSizeHalf(11, posArray) + (zVS)));
+}
+
+int32 AVoxel::GetVoxelSizeHalf(int element, bool positiveArray[])
+{
+	return positiveArray[element] ? _voxelSizeHalf : -_voxelSizeHalf;
 }
 
 void AVoxel::UpdateMesh()
@@ -119,55 +160,79 @@ void AVoxel::UpdateMesh()
 							{
 							case 0:
 							{
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
+								bool posArray[12] =
+								{
+									false, true, true,
+									false, false, true,
+									true, false, true,
+									true, true, true
+								};
+								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
 								mNormals.Append(bNormals0, ARRAY_COUNT(bNormals0));
 								break;
 							}
 							case 1:
 							{
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
+								bool posArray[12] =
+								{
+									true, false, false,
+									false, false, false,
+									false, true, false,
+									true, true, false
+								};
+								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
 								mNormals.Append(bNormals1, ARRAY_COUNT(bNormals1));
 								break;
 							}
 							case 2:
 							{
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
+								bool posArray[12] =
+								{
+									true, true, true,
+									true, true, false,
+									false, true, false,
+									false, true, true
+								};
+								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
 								mNormals.Append(bNormals2, ARRAY_COUNT(bNormals2));
 								break;
 							}
 							case 3:
 							{
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
+								bool posArray[12] =
+								{
+									false, false, true,
+									false, false, false,
+									true, false, false,
+									true, false, true
+								};
+								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
 								mNormals.Append(bNormals3, ARRAY_COUNT(bNormals3));
 								break;
 							}
 							case 4:
 							{
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
+								bool posArray[12] =
+								{
+									true, false, true,
+									true, false, false,
+									true, true, false,
+									true, true, true
+								};
+								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
 								mNormals.Append(bNormals5, ARRAY_COUNT(bNormals4));
 								break;
 							}
 							case 5:
 							{
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), _voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), -_voxelSizeHalf + (zVS)));
-								mVerticies.Add(FVector(-_voxelSizeHalf + (xVS), -_voxelSizeHalf + (yVS), _voxelSizeHalf + (zVS)));
+								bool posArray[12] =
+								{
+									false, true, true,
+									false, true, false,
+									false, false, false,
+									false, false, true
+								};
+								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
 								mNormals.Append(bNormals4, ARRAY_COUNT(bNormals5));
 								break;
 							}
@@ -185,5 +250,5 @@ void AVoxel::UpdateMesh()
 	}
 
 	_proceduralMeshComponent->ClearAllMeshSections();
-	_proceduralMeshComponent->CreateMeshSection(0, mVerticies, mTriangles, mNormals, mUVS, mVertexColors, mTangents, true);
+	_proceduralMeshComponent->CreateMeshSection(0, mVerticies, mTriangles, mNormals, mUVS, mVertexColors, mTangents, _collision);
 }

@@ -1,5 +1,6 @@
 #include "MainPlayerController.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -37,8 +38,7 @@ bool AMainPlayerController::UpdatePosition()
 
 void AMainPlayerController::AddChunk()
 {
-	FActorSpawnParameters spawnParams = FActorSpawnParameters();
-	FVector spawnPos = FVector(0, 0, 0);
+	FTransform spawnTransform = FTransform(FRotator(0, 0, 0), FVector(0, 0, 0));
 	FVector2D chunkPos = FVector2D(0, 0);
 
 	for (int x = -_renderRange; x <= _renderRange; x++)
@@ -47,14 +47,20 @@ void AMainPlayerController::AddChunk()
 		{
 			chunkPos.X = _chunkX + x;
 			chunkPos.Y = _chunkY + y;
-			spawnPos = FVector(chunkPos.X * _chunkSize, chunkPos.Y * _chunkSize, 0);
+			spawnTransform.SetLocation(FVector(chunkPos.X * _chunkSize, chunkPos.Y * _chunkSize, 0));
 
-			if (!CheckRadius(spawnPos.X + _chunkSizeHalf, spawnPos.Y + _chunkSizeHalf)) continue;
+			if (!CheckRadius(spawnTransform.GetLocation().X + _chunkSizeHalf, spawnTransform.GetLocation().Y + _chunkSizeHalf)) continue;
 			if (_chunksCords.Contains(chunkPos)) continue;
 
 			_chunksCords.Add(chunkPos);
-			AVoxel* chunk = GetWorld()->SpawnActor<AVoxel>(_chunk, spawnPos, FRotator(0, 0, 0), spawnParams);
-			chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y);
+
+			AVoxel* chunk = Cast<AVoxel>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, _chunk, spawnTransform));
+			if (chunk != nullptr)
+			{
+				chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y, spawnTransform);
+				UGameplayStatics::FinishSpawningActor(chunk, spawnTransform);
+			}
+
 			_chunks.Add(chunk);
 		}
 	}
