@@ -6,6 +6,17 @@
 #include "ProceduralMeshComponent.h"
 #include "Voxel.generated.h"
 
+struct FMeshSection
+{
+	TArray<FVector> Verticies;
+	TArray<int32> Triangles;
+	TArray<FVector> Normals;
+	TArray<FVector2D> UVS;
+	TArray<FColor> VertexColors;
+	TArray<FProcMeshTangent> Tangents;
+	int32 elementID = 0;
+};
+
 USTRUCT(BlueprintType)
 struct FOctaves
 {

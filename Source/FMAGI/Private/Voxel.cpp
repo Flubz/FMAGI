@@ -54,6 +54,7 @@ void AVoxel::GenerateChunk()
 			for (int32 z = 0; z < _chunkZElements; z++)
 			{
 				int32 index = x + (y * _chunkLineElements) + (z * _chunkLineElementsP2);
+				_chunkFields[index] = z == _chunkZMaxHeight + noise[(y * _chunkLineElements) + x] ? 2 : 0;
 				_chunkFields[index] = z < _chunkZMaxHeight + noise[(y * _chunkLineElements) + x] ? 1 : 0;
 			}
 		}
@@ -112,13 +113,10 @@ int32 AVoxel::GetVoxelSizeHalf(int element, bool positiveArray[])
 
 void AVoxel::UpdateMesh()
 {
-	TArray<FVector> mVerticies;
-	TArray<int32> mTriangles;
-	TArray<FVector> mNormals;
-	TArray<FVector2D> mUVS;
-	TArray<FColor> mVertexColors;
-	TArray<FProcMeshTangent> mTangents;
-	int32 elementID = 0;
+	TArray<FMeshSection> _meshSections;
+	_meshSections.SetNum(_materials.Num());
+
+	int32 elementNumber = 0;
 
 	for (int32 x = 0; x < _chunkLineElements; x++)
 	{
@@ -131,6 +129,14 @@ void AVoxel::UpdateMesh()
 				if (meshIndex > 0)
 				{
 					meshIndex--;
+
+					TArray<FVector>& mVerticies = _meshSections[meshIndex].Verticies;
+					TArray<int32>& mTriangles = _meshSections[meshIndex].Triangles;
+					TArray<FVector>& mNormals = _meshSections[meshIndex].Normals;
+					TArray<FVector2D>& mUVS = _meshSections[meshIndex].UVS;
+					TArray<FColor>& mVertexColors = _meshSections[meshIndex].VertexColors;
+					TArray<FProcMeshTangent>& mTangents = _meshSections[meshIndex].Tangents;
+					int32 elementID = _meshSections[meshIndex].elementID;
 
 					int triangleNum = 0;
 					for (int i = 0; i < 6; i++)
@@ -245,12 +251,25 @@ void AVoxel::UpdateMesh()
 							mVertexColors.Add(color); mVertexColors.Add(color); mVertexColors.Add(color); mVertexColors.Add(color);
 						}
 					}
-					elementID += triangleNum;
+					elementNumber += triangleNum;
+					_meshSections[meshIndex].elementID += triangleNum;
 				}
 			}
 		}
 	}
 
 	_proceduralMeshComponent->ClearAllMeshSections();
-	_proceduralMeshComponent->CreateMeshSection(0, mVerticies, mTriangles, mNormals, mUVS, mVertexColors, mTangents, _collision);
+
+	for (int i = 0; i < _meshSections.Num(); i++)
+	{
+		if (_meshSections[i].Verticies.Num() > 0)
+			_proceduralMeshComponent->CreateMeshSection(0, _meshSections[i].Verticies,
+				_meshSections[i].Triangles, _meshSections[i].Normals, _meshSections[i].UVS,
+				_meshSections[i].VertexColors, _meshSections[i].Tangents, _collision);
+	}
+
+	for (int i = 0; i < _materials.Num(); i++)
+	{
+		_proceduralMeshComponent->SetMaterial(i, _materials[i]);
+	}
 }
