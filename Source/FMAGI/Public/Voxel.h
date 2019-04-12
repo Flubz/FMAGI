@@ -12,6 +12,8 @@ struct FOctaves
 	GENERATED_USTRUCT_BODY()
 public:
 	UPROPERTY(Category = Octave, EditAnywhere, BlueprintReadWrite)
+		bool _skip = false;
+	UPROPERTY(Category = Octave, EditAnywhere, BlueprintReadWrite)
 		float _xMult = 1;
 	UPROPERTY(Category = Octave, EditAnywhere, BlueprintReadWrite)
 		float _yMult = 1;

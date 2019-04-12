@@ -65,7 +65,6 @@ TArray<int32> AVoxel::CalculateNoise()
 	TArray<int32> noiseArray;
 	noiseArray.SetNum(_chunkLineElementsP2);
 
-	float cumulativeNoiseValue = 0.0f;
 	float xNoiseMult = 0.0f;
 	float yNoiseMult = 0.0f;
 	int32 val = 0.0f;
@@ -74,8 +73,11 @@ TArray<int32> AVoxel::CalculateNoise()
 	{
 		for (int y = 0; y < _chunkLineElements; y++)
 		{
+			float cumulativeNoiseValue = 0.0f;
+
 			for (int o = 0; o < _octaves.Num(); o++)
 			{
+				if (_octaves[o]._skip) continue;
 				float noiseValue = 0.0f;
 				xNoiseMult = ((_chunkXIndex * _chunkLineElements) + x) * _octaves[o]._xMult;
 				yNoiseMult = ((_chunkYIndex * _chunkLineElements) + y) * _octaves[o]._yMult;
