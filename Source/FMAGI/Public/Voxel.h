@@ -49,6 +49,7 @@ public:
 	AVoxel();
 
 	void SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform);
+	void SetVoxel(FVector localPos, int32 value);
 
 protected:
 
@@ -81,6 +82,7 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = Noise)
 		void GetNoiseValue(float x, float y, float& refNoiseValue);
+
 
 private:
 	void GenerateChunk();
