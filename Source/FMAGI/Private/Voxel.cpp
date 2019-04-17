@@ -59,27 +59,22 @@ void AVoxel::GenerateChunk()
 
 				if (z == (_chunkZMaxHeight + 1) +noise[x + (y * _chunkLineElements)] && randomTreeStream.FRand() < 0.02f)
 				{
-					// Tree (if is < 2% of our voxels)
 					_chunkFields[index] = 4;
 				}
 				else if (z == (_chunkZMaxHeight) +noise[x + (y * _chunkLineElements)])
 				{
-					// Grass
 					_chunkFields[index] = 1;
 				}
 				else if (z == (_chunkZMaxHeight - randChunkDepth) + noise[x + (y * _chunkLineElements)])
 				{
-					// Dirt
 					_chunkFields[index] = 2;
 				}
 				else if (z < (_chunkZMaxHeight - randChunkDepth) + noise[x + (y * _chunkLineElements)])
 				{
-					// Stone
 					_chunkFields[index] = 3;
 				}
 				else
 				{
-					// Empty
 					_chunkFields[index] = 0;
 				}
 			}
