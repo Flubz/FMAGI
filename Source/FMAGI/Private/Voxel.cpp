@@ -1,5 +1,7 @@
 #include "Voxel.h"
 #include "ProceduralMeshComponent.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "NoExportTypes.h"
 
 const int32 bTriangles[] = { 2, 1, 0, 0, 3, 2 };
 const FVector2D bUVs[] = { FVector2D(0.000000, 0.000000), FVector2D(0.000000, 1.000000), FVector2D(1.000000, 1.000000), FVector2D(1.000000, 0.000000) };
@@ -16,7 +18,6 @@ const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000), FVector(0.00000
 AVoxel::AVoxel()
 {
 	PrimaryActorTick.bCanEverTick = false;
-
 }
 
 void AVoxel::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform)
@@ -44,7 +45,7 @@ void AVoxel::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform
 void AVoxel::GenerateChunk()
 {
 	_chunkFields.SetNumUninitialized(_chunkTotalElements);
-
+	FRandomStream randomTreeStream = FRandomStream(_randomSeed);
 	TArray<int32> noise = CalculateNoise();
 
 	for (int32 x = 0; x < _chunkLineElements; x++)
@@ -54,8 +55,33 @@ void AVoxel::GenerateChunk()
 			for (int32 z = 0; z < _chunkZElements; z++)
 			{
 				int32 index = x + (y * _chunkLineElements) + (z * _chunkLineElementsP2);
-				_chunkFields[index] = z == _chunkZMaxHeight + noise[(y * _chunkLineElements) + x] ? 2 : 0;
-				_chunkFields[index] = z < _chunkZMaxHeight + noise[(y * _chunkLineElements) + x] ? 1 : 0;
+				int32 randChunkDepth = UKismetMathLibrary::RandomIntegerInRange(0, 2);
+
+				if (z == (_chunkZMaxHeight + 1) +noise[x + (y * _chunkLineElements)] && randomTreeStream.FRand() < 0.02f)
+				{
+					// Tree (if is < 2% of our voxels)
+					_chunkFields[index] = 4;
+				}
+				else if (z == (_chunkZMaxHeight) +noise[x + (y * _chunkLineElements)])
+				{
+					// Grass
+					_chunkFields[index] = 1;
+				}
+				else if (z == (_chunkZMaxHeight - randChunkDepth) + noise[x + (y * _chunkLineElements)])
+				{
+					// Dirt
+					_chunkFields[index] = 2;
+				}
+				else if (z < (_chunkZMaxHeight - randChunkDepth) + noise[x + (y * _chunkLineElements)])
+				{
+					// Stone
+					_chunkFields[index] = 3;
+				}
+				else
+				{
+					// Empty
+					_chunkFields[index] = 0;
+				}
 			}
 		}
 	}
@@ -111,6 +137,18 @@ int32 AVoxel::GetVoxelSizeHalf(int element, bool positiveArray[])
 	return positiveArray[element] ? _voxelSizeHalf : -_voxelSizeHalf;
 }
 
+void AVoxel::SetVoxel(FVector localPos, int32 value)
+{
+	int32 x = localPos.X / _voxelSize;
+	int32 y = localPos.Y / _voxelSize;
+	int32 z = localPos.Z / _voxelSize;
+	int32 index = x + (y * _chunkLineElements) + (z * _chunkLineElementsP2);
+
+	_chunkFields[index] = value;
+
+	UpdateMesh();
+}
+
 void AVoxel::UpdateMesh()
 {
 	TArray<FMeshSection> _meshSections;
@@ -141,7 +179,7 @@ void AVoxel::UpdateMesh()
 					int triangleNum = 0;
 					for (int i = 0; i < 6; i++)
 					{
-						int32 newIndex = index + bMask[i].X + (bMask[i].Y * _chunkLineElements) + (bMask[i].Z * _chunkLineElementsP2);
+						int newIndex = index + bMask[i].X + (bMask[i].Y * _chunkLineElements) + (bMask[i].Z * _chunkLineElementsP2);
 						bool flag = false;
 						if (meshIndex >= 20) flag = true;
 						else if ((x + bMask[i].X < _chunkLineElements) && (x + bMask[i].X >= 0) && (y + bMask[i].Y < _chunkLineElements) && (y + bMask[i].Y >= 0))
@@ -263,7 +301,7 @@ void AVoxel::UpdateMesh()
 	for (int i = 0; i < _meshSections.Num(); i++)
 	{
 		if (_meshSections[i].Verticies.Num() > 0)
-			_proceduralMeshComponent->CreateMeshSection(0, _meshSections[i].Verticies,
+			_proceduralMeshComponent->CreateMeshSection(i, _meshSections[i].Verticies,
 				_meshSections[i].Triangles, _meshSections[i].Normals, _meshSections[i].UVS,
 				_meshSections[i].VertexColors, _meshSections[i].Tangents, _collision);
 	}

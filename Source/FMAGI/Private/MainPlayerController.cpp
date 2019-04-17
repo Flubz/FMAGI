@@ -1,12 +1,14 @@
 #include "MainPlayerController.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "DrawDebugHelpers.h"
 
 void AMainPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	_chunkSize = _chunkLineElement * _voxelSize;
 	_chunkSizeHalf = _chunkSize / 1;
+	_voxelSizeHalf = _voxelSize / 2;
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
@@ -83,4 +85,47 @@ bool AMainPlayerController::CheckRadius(float x_, float y_)
 {
 	FVector vec = ((FVector(x_, y_, 0)) - _characterPosition);
 	return (vec.Size() < ((float) _chunkSize * (float) _renderRange));
+}
+
+void AMainPlayerController::UpdateVoxel(bool isAdding)
+{
+	if (GetWorld())
+	{
+		APlayerCameraManager* playerCam = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
+
+		FCollisionQueryParams traceParams = FCollisionQueryParams(FName(TEXT("HitTrace")));
+		traceParams.bTraceComplex = true;
+		traceParams.bReturnPhysicalMaterial = false;
+		traceParams.AddIgnoredActor(this->GetPawn());
+
+		FHitResult hit;
+
+		GetWorld()->LineTraceSingleByChannel
+		(
+			hit,
+			playerCam->GetCameraLocation(),
+			playerCam->GetCameraLocation() + (playerCam->GetActorForwardVector() * _hitRange),
+			ECC_Visibility,
+			traceParams
+		);
+
+
+		if (hit.GetActor() != NULL)
+		{
+			// DrawDebugSphere(GetWorld(), hit.Location, 2.0f, 12, FColor::Black, false, 3.0f);
+			FVector voxelHalfVec = _voxelSizeHalf * FVector::OneVector;
+
+			FVector dir = UKismetMathLibrary::GetDirectionUnitVector(hit.Location, playerCam->GetCameraLocation());
+			int32 adding = (UKismetMathLibrary::Conv_BoolToFloat(isAdding) * 2) - 1;
+			FVector hitOffset = hit.Location + (dir * adding);
+			FVector hitOffsetVoxelHalf = hitOffset + voxelHalfVec;
+
+			FVector hitOffsetChunkSize = hitOffsetVoxelHalf / _chunkSize;
+			FVector2D chunkCoords = FVector2D(UKismetMathLibrary::FFloor(hitOffsetChunkSize.X), UKismetMathLibrary::FFloor(hitOffsetChunkSize.Y));
+			UE_LOG(LogTemp, Warning, TEXT("%s"), *chunkCoords.ToString());
+			AVoxel* targetChunk = _chunks[_chunksCords.Find(chunkCoords)];
+			FVector voxelPos = ((targetChunk->GetActorLocation() * -1) + hitOffset) + voxelHalfVec;
+			targetChunk->SetVoxel(voxelPos, UKismetMathLibrary::Conv_BoolToInt(isAdding));
+		}
+	}
 }

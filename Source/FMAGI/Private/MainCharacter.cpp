@@ -1,27 +1,62 @@
 #include "MainCharacter.h"
-
+#include "Components/CapsuleComponent.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/PlayerController.h"
 
 AMainCharacter::AMainCharacter()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
+	_baseTurnRate = 45.f;
+	_baseLookUpRate = 45.f;
+
+	_cameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
+	_cameraComponent->SetupAttachment(GetCapsuleComponent());
+	_cameraComponent->RelativeLocation = FVector(0, 0, 64.f);
+	_cameraComponent->bUsePawnControlRotation = true;
 }
 
-void AMainCharacter::BeginPlay()
+void AMainCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
-	Super::BeginPlay();
-	
+	check(PlayerInputComponent);
+
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMainCharacter::StartFiring);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMainCharacter::StopFiring);
+
+	PlayerInputComponent->BindAxis("MoveForward", this, &AMainCharacter::MoveForward);
+	PlayerInputComponent->BindAxis("MoveRight", this, &AMainCharacter::MoveRight);
+
+	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+	PlayerInputComponent->BindAxis("TurnRate", this, &AMainCharacter::TurnAtRate);
+	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("LookUpRate", this, &AMainCharacter::LookUpAtRate);
 }
 
-void AMainCharacter::Tick(float DeltaTime)
+void AMainCharacter::MoveForward(float value)
 {
-	Super::Tick(DeltaTime);
-
+	if (value != 0.0f)
+	{
+		AddMovementInput(GetActorForwardVector(), value * _movementSpeed);
+	}
 }
 
-void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AMainCharacter::MoveRight(float value)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
+	if (value != 0.0f)
+	{
+		AddMovementInput(GetActorRightVector(), value * _movementSpeed);
+	}
 }
 
+void AMainCharacter::TurnAtRate(float rate)
+{
+	AddControllerYawInput(rate * _baseTurnRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMainCharacter::LookUpAtRate(float rate)
+{
+	AddControllerPitchInput(rate * _baseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
