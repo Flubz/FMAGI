@@ -112,7 +112,6 @@ void AMainPlayerController::UpdateVoxel(bool isAdding)
 
 		if (hit.GetActor() != NULL)
 		{
-			// DrawDebugSphere(GetWorld(), hit.Location, 2.0f, 12, FColor::Black, false, 3.0f);
 			FVector voxelHalfVec = _voxelSizeHalf * FVector::OneVector;
 
 			FVector dir = UKismetMathLibrary::GetDirectionUnitVector(hit.Location, playerCam->GetCameraLocation());
@@ -122,7 +121,7 @@ void AMainPlayerController::UpdateVoxel(bool isAdding)
 
 			FVector hitOffsetChunkSize = hitOffsetVoxelHalf / _chunkSize;
 			FVector2D chunkCoords = FVector2D(UKismetMathLibrary::FFloor(hitOffsetChunkSize.X), UKismetMathLibrary::FFloor(hitOffsetChunkSize.Y));
-			UE_LOG(LogTemp, Warning, TEXT("%s"), *chunkCoords.ToString());
+			
 			AVoxel* targetChunk = _chunks[_chunksCords.Find(chunkCoords)];
 			FVector voxelPos = ((targetChunk->GetActorLocation() * -1) + hitOffset) + voxelHalfVec;
 			targetChunk->SetVoxel(voxelPos, UKismetMathLibrary::Conv_BoolToInt(isAdding));

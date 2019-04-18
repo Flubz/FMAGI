@@ -5,10 +5,10 @@ using System.Collections.Generic;
 
 public class FMAGITarget : TargetRules
 {
-	public FMAGITarget(TargetInfo Target) : base(Target)
-	{
-		Type = TargetType.Game;
+    public FMAGITarget(TargetInfo Target) : base(Target)
+    {
+        Type = TargetType.Game;
 
-		ExtraModuleNames.AddRange( new string[] { "FMAGI" } );
-	}
+        ExtraModuleNames.AddRange(new string[] { "FMAGI" });
+    }
 }

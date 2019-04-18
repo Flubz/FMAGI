@@ -2,6 +2,7 @@
 #include "ProceduralMeshComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "NoExportTypes.h"
+#include "GameFramework/Actor.h"
 
 const int32 bTriangles[] = { 2, 1, 0, 0, 3, 2 };
 const FVector2D bUVs[] = { FVector2D(0.000000, 0.000000), FVector2D(0.000000, 1.000000), FVector2D(1.000000, 1.000000), FVector2D(1.000000, 0.000000) };
@@ -31,7 +32,7 @@ void AVoxel::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform
 
 	FString str = "Voxel_" + FString::FromInt(_chunkXIndex) + "_" + FString::FromInt(_chunkYIndex);
 	FName name = FName(*str);
-	SetActorLabel(str);
+	// SetActorLabel(str);
 	_proceduralMeshComponent = NewObject<UProceduralMeshComponent>(this, name);
 	_proceduralMeshComponent->RegisterComponent();
 
@@ -45,8 +46,10 @@ void AVoxel::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform
 void AVoxel::GenerateChunk()
 {
 	_chunkFields.SetNumUninitialized(_chunkTotalElements);
-	FRandomStream randomTreeStream = FRandomStream(_randomSeed);
 	TArray<int32> noise = CalculateNoise();
+
+	FRandomStream randStream = FRandomStream(_randomSeed);
+	TArray<FIntVector> treeCenters;
 
 	for (int32 x = 0; x < _chunkLineElements; x++)
 	{
@@ -54,28 +57,72 @@ void AVoxel::GenerateChunk()
 		{
 			for (int32 z = 0; z < _chunkZElements; z++)
 			{
-				int32 index = x + (y * _chunkLineElements) + (z * _chunkLineElementsP2);
+				int32 noiseIndex = x + (y * _chunkLineElements);
+				int32 chunkIndex = noiseIndex + (z * _chunkLineElementsP2);
 				int32 randChunkDepth = UKismetMathLibrary::RandomIntegerInRange(0, 2);
 
-				if (z == (_chunkZMaxHeight + 1) +noise[x + (y * _chunkLineElements)] && randomTreeStream.FRand() < 0.02f)
+				if (z == (_chunkZMaxHeight + 1) + noise[noiseIndex] && randStream.FRand() < 0.02)
 				{
-					_chunkFields[index] = 4;
+					treeCenters.Add(FIntVector(x, y, z));
+					_chunkFields[chunkIndex] = 4;
 				}
-				else if (z == (_chunkZMaxHeight) +noise[x + (y * _chunkLineElements)])
+				else if (z == (_chunkZMaxHeight) +noise[noiseIndex])
 				{
-					_chunkFields[index] = 1;
+					_chunkFields[chunkIndex] = 1;
 				}
-				else if (z == (_chunkZMaxHeight - randChunkDepth) + noise[x + (y * _chunkLineElements)])
+				else if (z == (_chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
 				{
-					_chunkFields[index] = 2;
+					_chunkFields[chunkIndex] = 2;
 				}
-				else if (z < (_chunkZMaxHeight - randChunkDepth) + noise[x + (y * _chunkLineElements)])
+				else if (z < (_chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
 				{
-					_chunkFields[index] = 3;
+					_chunkFields[chunkIndex] = 3;
 				}
 				else
 				{
-					_chunkFields[index] = 0;
+					_chunkFields[chunkIndex] = 0;
+				}
+			}
+		}
+	}
+
+	GenerateTrees(randStream, treeCenters);
+}
+
+void AVoxel::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters)
+{
+	int32 treeX = 2;
+	int32 treeY = 2;
+	int32 treeZ = 2;
+
+	for (FIntVector treeCenter : treeCenters)
+	{
+		int32 randX = randomStream.RandRange(0, 2);
+		int32 randY = randomStream.RandRange(0, 2);
+		int32 randZ = randomStream.RandRange(0, 2);
+		int32 randHeight = randomStream.RandRange(3, 6);
+
+		for (int32 x = -treeX; x < treeX + 1; x++)
+		{
+			for (int32 y = -treeY; y < treeY + 1; y++)
+			{
+				for (int32 z = -treeZ; z < treeZ + 1; z++)
+				{
+					if (InRange(x + treeCenter.X, _chunkLineElements) &&
+						InRange(y + treeCenter.Y, _chunkLineElements) &&
+						InRange(z + treeCenter.Z, _chunkZElements))
+					{
+						float radius = FVector(x * randX, y * randY, z * randZ).Size();
+						if (radius <= 2.8)
+						{
+							if (randomStream.FRand() < 0.5 || radius <= 1.2)
+							{
+								_chunkFields[treeCenter.X + x +
+									(_chunkLineElements * (treeCenter.Y + y)) +
+									(_chunkLineElementsP2 * (treeCenter.Z + z + randHeight))] = 21;
+							}
+						}
+					}
 				}
 			}
 		}

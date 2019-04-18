@@ -83,7 +83,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = Noise)
 		void GetNoiseValue(float x, float y, float& refNoiseValue);
 
-
 private:
 	void GenerateChunk();
 	void UpdateMesh();
@@ -96,5 +95,7 @@ private:
 	int32 _voxelSizeHalf;
 	TArray<int32> _chunkFields;
 	UProceduralMeshComponent* _proceduralMeshComponent;
+	void GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters);
+	bool InRange(int32 value, int32 range) { return (value >= 0 && value < range); }
 };
 

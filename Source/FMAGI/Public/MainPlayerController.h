@@ -13,7 +13,7 @@ public:
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite) int32 _renderRange;
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite) int32 _chunkLineElement;
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite) int32 _voxelSize;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite) float _hitRange = 1000.0f;
+	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite) float _hitRange;
 	// Is ChunkLineElement * VoxelSize
 	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadOnly) int32 _chunkSize;
 	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadOnly) int32 _chunkSizeHalf;
