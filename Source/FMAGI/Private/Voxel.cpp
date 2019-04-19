@@ -2,7 +2,6 @@
 #include "ProceduralMeshComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "NoExportTypes.h"
-#include "GameFramework/Actor.h"
 
 const int32 bTriangles[] = { 2, 1, 0, 0, 3, 2 };
 const FVector2D bUVs[] = { FVector2D(0.000000, 0.000000), FVector2D(0.000000, 1.000000), FVector2D(1.000000, 1.000000), FVector2D(1.000000, 0.000000) };
@@ -21,18 +20,19 @@ AVoxel::AVoxel()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-void AVoxel::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform)
+void AVoxel::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform, FChunkSpawn& chunkSpawnProperties)
 {
 	_chunkXIndex = chunkXIndex;
 	_chunkYIndex = chunkYIndex;
 
-	_chunkLineElementsP2 = _chunkLineElements * _chunkLineElements;
-	_chunkTotalElements = _chunkLineElementsP2 * _chunkZElements;
-	_voxelSizeHalf = _voxelSize / 2;
+	_csp = chunkSpawnProperties;
+
+	_chunkLineElementsP2 = _csp._chunkLineElements * _csp._chunkLineElements;
+	_chunkTotalElements = _chunkLineElementsP2 * _csp._chunkZElements;
+	_voxelSizeHalf = _csp._voxelSize / 2;
 
 	FString str = "Voxel_" + FString::FromInt(_chunkXIndex) + "_" + FString::FromInt(_chunkYIndex);
 	FName name = FName(*str);
-	// SetActorLabel(str);
 	_proceduralMeshComponent = NewObject<UProceduralMeshComponent>(this, name);
 	_proceduralMeshComponent->RegisterComponent();
 
@@ -51,32 +51,27 @@ void AVoxel::GenerateChunk()
 	FRandomStream randStream = FRandomStream(_randomSeed);
 	TArray<FIntVector> treeCenters;
 
-	for (int32 x = 0; x < _chunkLineElements; x++)
+	for (int32 x = 0; x < _csp._chunkLineElements; x++)
 	{
-		for (int32 y = 0; y < _chunkLineElements; y++)
+		for (int32 y = 0; y < _csp._chunkLineElements; y++)
 		{
-			for (int32 z = 0; z < _chunkZElements; z++)
+			for (int32 z = 0; z < _csp._chunkZElements; z++)
 			{
-				int32 noiseIndex = x + (y * _chunkLineElements);
+				int32 noiseIndex = x + (y * _csp._chunkLineElements);
 				int32 chunkIndex = noiseIndex + (z * _chunkLineElementsP2);
 				int32 randChunkDepth = UKismetMathLibrary::RandomIntegerInRange(0, 2);
 
-				if (z == (_chunkZMaxHeight + 1) + noise[noiseIndex] && randStream.FRand() < 0.02)
+				if (z == (_csp._chunkZMaxHeight) + noise[noiseIndex])
 				{
-					treeCenters.Add(FIntVector(x, y, z));
-					_chunkFields[chunkIndex] = 4;
+					_chunkFields[chunkIndex] = 11;
 				}
-				else if (z == (_chunkZMaxHeight) +noise[noiseIndex])
+				else if (z == (_csp._chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
 				{
-					_chunkFields[chunkIndex] = 1;
+					_chunkFields[chunkIndex] = 12;
 				}
-				else if (z == (_chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
+				else if (z < (_csp._chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
 				{
-					_chunkFields[chunkIndex] = 2;
-				}
-				else if (z < (_chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
-				{
-					_chunkFields[chunkIndex] = 3;
+					_chunkFields[chunkIndex] = 13;
 				}
 				else
 				{
@@ -86,21 +81,37 @@ void AVoxel::GenerateChunk()
 		}
 	}
 
-	GenerateTrees(randStream, treeCenters);
+	GenerateTrees(randStream, treeCenters, noise);
 }
 
-void AVoxel::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters)
+void AVoxel::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters, TArray<int32>& noise)
 {
-	int32 treeX = 2;
-	int32 treeY = 2;
-	int32 treeZ = 2;
+	int32 treeX = _treeSpawnProperties._treeLeavesDimensions;
+	int32 treeY = _treeSpawnProperties._treeLeavesDimensions;
+	int32 treeZ = _treeSpawnProperties._treeLeavesDimensions;
+
+	for (int x = 2; x < _csp._chunkLineElements - 2; x++)
+	{
+		for (int y = 2; y < _csp._chunkLineElements - 2; y++)
+		{
+			for (int z = 0; z < _csp._chunkZElements; z++)
+			{
+				if (randomStream.FRand() < _treeSpawnProperties._spawnPercentPerChunk
+					&& z == (_csp._chunkZMaxHeight + 1) + noise[x + (y * _csp._chunkLineElements)])
+				{
+					treeCenters.Add(FIntVector(x, y, z));
+				}
+			}
+		}
+	}
 
 	for (FIntVector treeCenter : treeCenters)
 	{
 		int32 randX = randomStream.RandRange(0, 2);
 		int32 randY = randomStream.RandRange(0, 2);
 		int32 randZ = randomStream.RandRange(0, 2);
-		int32 randHeight = randomStream.RandRange(3, 6);
+		int32 randHeight = randomStream.RandRange
+		(_treeSpawnProperties._treeTrunkHeightMin, _treeSpawnProperties._treeTrunkHeightMax);
 
 		for (int32 x = -treeX; x < treeX + 1; x++)
 		{
@@ -108,23 +119,28 @@ void AVoxel::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& tree
 			{
 				for (int32 z = -treeZ; z < treeZ + 1; z++)
 				{
-					if (InRange(x + treeCenter.X, _chunkLineElements) &&
-						InRange(y + treeCenter.Y, _chunkLineElements) &&
-						InRange(z + treeCenter.Z, _chunkZElements))
+					if (InRange(x + treeCenter.X, _csp._chunkLineElements) &&
+						InRange(y + treeCenter.Y, _csp._chunkLineElements) &&
+						InRange(z + treeCenter.Z, _csp._chunkZElements))
 					{
 						float radius = FVector(x * randX, y * randY, z * randZ).Size();
 						if (radius <= 2.8)
 						{
-							if (randomStream.FRand() < 0.5 || radius <= 1.2)
+							if (randomStream.FRand() < 0.5 || radius <= 1.4)
 							{
 								_chunkFields[treeCenter.X + x +
-									(_chunkLineElements * (treeCenter.Y + y)) +
-									(_chunkLineElementsP2 * (treeCenter.Z + z + randHeight))] = 21;
+									(_csp._chunkLineElements * (treeCenter.Y + y)) +
+									(_chunkLineElementsP2 * (treeCenter.Z + z + randHeight))] = 1;
 							}
 						}
 					}
 				}
 			}
+		}
+
+		for (int32 h = 0; h < randHeight; h++)
+		{
+			_chunkFields[treeCenter.X + (treeCenter.Y * _csp._chunkLineElements) + ((treeCenter.Z + h) * _chunkLineElementsP2)] = 14;
 		}
 	}
 }
@@ -138,9 +154,9 @@ TArray<int32> AVoxel::CalculateNoise()
 	float yNoiseMult = 0.0f;
 	int32 val = 0.0f;
 
-	for (int x = 0; x < _chunkLineElements; x++)
+	for (int x = 0; x < _csp._chunkLineElements; x++)
 	{
-		for (int y = 0; y < _chunkLineElements; y++)
+		for (int y = 0; y < _csp._chunkLineElements; y++)
 		{
 			float cumulativeNoiseValue = 0.0f;
 
@@ -148,8 +164,8 @@ TArray<int32> AVoxel::CalculateNoise()
 			{
 				if (_octaves[o]._skip) continue;
 				float noiseValue = 0.0f;
-				xNoiseMult = ((_chunkXIndex * _chunkLineElements) + x) * _octaves[o]._xMult;
-				yNoiseMult = ((_chunkYIndex * _chunkLineElements) + y) * _octaves[o]._yMult;
+				xNoiseMult = ((_chunkXIndex * _csp._chunkLineElements) + x) * _octaves[o]._xMult;
+				yNoiseMult = ((_chunkYIndex * _csp._chunkLineElements) + y) * _octaves[o]._yMult;
 				GetNoiseValue(xNoiseMult, yNoiseMult, noiseValue);
 				noiseValue *= _octaves[o]._weight;
 				if (_octaves[o]._clamp)
@@ -160,7 +176,7 @@ TArray<int32> AVoxel::CalculateNoise()
 			}
 
 			val = FMath::FloorToInt((cumulativeNoiseValue));
-			noiseArray[(y * _chunkLineElements) + x] = val;
+			noiseArray[(y * _csp._chunkLineElements) + x] = val;
 		}
 	}
 	return noiseArray;
@@ -181,10 +197,10 @@ int32 AVoxel::GetVoxelSizeHalf(int element, bool positiveArray[])
 
 void AVoxel::SetVoxel(FVector localPos, int32 value)
 {
-	int32 x = localPos.X / _voxelSize;
-	int32 y = localPos.Y / _voxelSize;
-	int32 z = localPos.Z / _voxelSize;
-	int32 index = x + (y * _chunkLineElements) + (z * _chunkLineElementsP2);
+	int32 x = localPos.X / _csp._voxelSize;
+	int32 y = localPos.Y / _csp._voxelSize;
+	int32 z = localPos.Z / _csp._voxelSize;
+	int32 index = x + (y * _csp._chunkLineElements) + (z * _chunkLineElementsP2);
 
 	_chunkFields[index] = value;
 
@@ -198,14 +214,15 @@ void AVoxel::UpdateMesh()
 
 	int32 elementNumber = 0;
 
-	for (int32 x = 0; x < _chunkLineElements; x++)
+	for (int32 x = 0; x < _csp._chunkLineElements; x++)
 	{
-		for (int32 y = 0; y < _chunkLineElements; y++)
+		for (int32 y = 0; y < _csp._chunkLineElements; y++)
 		{
-			for (int32 z = 0; z < _chunkZElements; z++)
+			for (int32 z = 0; z < _csp._chunkZElements; z++)
 			{
-				int32 index = x + (_chunkLineElements * y) + (_chunkLineElementsP2 * z);
+				int32 index = x + (_csp._chunkLineElements * y) + (_chunkLineElementsP2 * z);
 				int32 meshIndex = _chunkFields[index];
+
 				if (meshIndex > 0)
 				{
 					meshIndex--;
@@ -221,13 +238,14 @@ void AVoxel::UpdateMesh()
 					int triangleNum = 0;
 					for (int i = 0; i < 6; i++)
 					{
-						int newIndex = index + bMask[i].X + (bMask[i].Y * _chunkLineElements) + (bMask[i].Z * _chunkLineElementsP2);
+						int newIndex = index + bMask[i].X + (bMask[i].Y * _csp._chunkLineElements) + (bMask[i].Z * _chunkLineElementsP2);
 						bool flag = false;
+
 						if (meshIndex >= 20) flag = true;
-						else if ((x + bMask[i].X < _chunkLineElements) && (x + bMask[i].X >= 0) && (y + bMask[i].Y < _chunkLineElements) && (y + bMask[i].Y >= 0))
+						else if ((x + bMask[i].X < _csp._chunkLineElements) && (x + bMask[i].X >= 0) && (y + bMask[i].Y < _csp._chunkLineElements) && (y + bMask[i].Y >= 0))
 						{
 							if (newIndex < _chunkFields.Num() && newIndex >= 0)
-								if (_chunkFields[newIndex] < 1) flag = true;
+								if (_chunkFields[newIndex] < 10) flag = true;
 						}
 						else flag = true;
 						if (flag)
@@ -240,9 +258,9 @@ void AVoxel::UpdateMesh()
 							mTriangles.Add(bTriangles[5] + triangleNum + elementID);
 							triangleNum += 4;
 
-							int32 xVS = x * _voxelSize;
-							int32 yVS = y * _voxelSize;
-							int32 zVS = z * _voxelSize;
+							int32 xVS = x * _csp._voxelSize;
+							int32 yVS = y * _csp._voxelSize;
+							int32 zVS = z * _csp._voxelSize;
 
 							switch (i)
 							{
@@ -345,7 +363,7 @@ void AVoxel::UpdateMesh()
 		if (_meshSections[i].Verticies.Num() > 0)
 			_proceduralMeshComponent->CreateMeshSection(i, _meshSections[i].Verticies,
 				_meshSections[i].Triangles, _meshSections[i].Normals, _meshSections[i].UVS,
-				_meshSections[i].VertexColors, _meshSections[i].Tangents, _collision);
+				_meshSections[i].VertexColors, _meshSections[i].Tangents, _csp._voxelCollision);
 	}
 
 	for (int i = 0; i < _materials.Num(); i++)

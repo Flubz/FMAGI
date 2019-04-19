@@ -6,9 +6,9 @@
 void AMainPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	_chunkSize = _chunkLineElement * _voxelSize;
+	_chunkSize = _chunkSpawnProperties._chunkLineElements * _chunkSpawnProperties._voxelSize;
 	_chunkSizeHalf = _chunkSize / 1;
-	_voxelSizeHalf = _voxelSize / 2;
+	_voxelSizeHalf = _chunkSpawnProperties._voxelSize / 2;
 }
 
 void AMainPlayerController::Tick(float DeltaTime)
@@ -59,7 +59,7 @@ void AMainPlayerController::AddChunk()
 			AVoxel* chunk = Cast<AVoxel>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, _chunk, spawnTransform));
 			if (chunk != nullptr)
 			{
-				chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y, spawnTransform);
+				chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y, spawnTransform, _chunkSpawnProperties);
 				UGameplayStatics::FinishSpawningActor(chunk, spawnTransform);
 			}
 
@@ -121,7 +121,7 @@ void AMainPlayerController::UpdateVoxel(bool isAdding)
 
 			FVector hitOffsetChunkSize = hitOffsetVoxelHalf / _chunkSize;
 			FVector2D chunkCoords = FVector2D(UKismetMathLibrary::FFloor(hitOffsetChunkSize.X), UKismetMathLibrary::FFloor(hitOffsetChunkSize.Y));
-			
+
 			AVoxel* targetChunk = _chunks[_chunksCords.Find(chunkCoords)];
 			FVector voxelPos = ((targetChunk->GetActorLocation() * -1) + hitOffset) + voxelHalfVec;
 			targetChunk->SetVoxel(voxelPos, UKismetMathLibrary::Conv_BoolToInt(isAdding));

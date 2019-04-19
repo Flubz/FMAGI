@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInterface.h"
 #include "ProceduralMeshComponent.h"
+#include "ChunkSpawnProperties.h"
 #include "Voxel.generated.h"
 
 struct FMeshSection
@@ -40,6 +41,21 @@ public:
 		float _clampMax = 0;
 };
 
+USTRUCT(BlueprintType)
+struct FTreeSpawnProperties
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY(Category = TreeSpawnProperties, EditAnywhere, BlueprintReadWrite)
+		float _spawnPercentPerChunk = 0.01f;
+	UPROPERTY(Category = TreeSpawnProperties, EditAnywhere, BlueprintReadWrite)
+		int32 _treeLeavesDimensions = 2;
+	UPROPERTY(Category = TreeSpawnProperties, EditAnywhere, BlueprintReadWrite)
+		int32 _treeTrunkHeightMin = 3;
+	UPROPERTY(Category = TreeSpawnProperties, EditAnywhere, BlueprintReadWrite)
+		int32 _treeTrunkHeightMax = 6;
+};
+
 UCLASS()
 class FMAGI_API AVoxel : public AActor
 {
@@ -48,41 +64,28 @@ class FMAGI_API AVoxel : public AActor
 public:
 	AVoxel();
 
-	void SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform);
+	void SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform, FChunkSpawn& chunkSpawnProperties);
 	void SetVoxel(FVector localPos, int32 value);
 
 protected:
-
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
 		TArray<UMaterialInterface*>  _materials;
-
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
-		float _freq = 1;
-
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
-		int32 _chunkZElements = 80;
-
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
-		int32 _chunkZMaxHeight = 30;
-
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
-		bool _collision = false;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		int32 _randomSeed = 0;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
-		int32 _voxelSize = 200;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
-		int32 _chunkLineElements = 10;
-	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadWrite)
-		int32 _chunkXIndex = 200;
-	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadWrite)
-		int32 _chunkYIndex = 200;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		TArray<FOctaves> _octaves;
+	UPROPERTY(Category = Tree, EditAnywhere, BlueprintReadOnly)
+		FTreeSpawnProperties _treeSpawnProperties;
+	/*UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
+		float _freq = 1;*/
+
+	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadOnly)
+		int32 _chunkXIndex = 200;
+	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadOnly)
+		int32 _chunkYIndex = 200;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = Noise)
 		void GetNoiseValue(float x, float y, float& refNoiseValue);
-
 private:
 	void GenerateChunk();
 	void UpdateMesh();
@@ -95,7 +98,8 @@ private:
 	int32 _voxelSizeHalf;
 	TArray<int32> _chunkFields;
 	UProceduralMeshComponent* _proceduralMeshComponent;
-	void GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters);
+	FChunkSpawn _csp;
+	void GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters, TArray<int32>& noise);
 	bool InRange(int32 value, int32 range) { return (value >= 0 && value < range); }
 };
 
