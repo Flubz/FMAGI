@@ -67,17 +67,21 @@ public:
 	void SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform& spawnTransform, FChunkSpawn& chunkSpawnProperties);
 	void SetVoxel(FVector localPos, int32 value);
 
+	UFUNCTION(BlueprintNativeEvent)
+		void AddInstanceVoxel(FVector instanceLocation);
+	virtual void AddInstanceVoxel_Implementation(FVector instanceLocation);
+
 protected:
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		TArray<UMaterialInterface*>  _materials;
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		int32 _randomSeed = 0;
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
+		float _chanceToSpawnGrass = 0.01;
+	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		TArray<FOctaves> _octaves;
 	UPROPERTY(Category = Tree, EditAnywhere, BlueprintReadOnly)
 		FTreeSpawnProperties _treeSpawnProperties;
-	/*UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
-		float _freq = 1;*/
 
 	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadOnly)
 		int32 _chunkXIndex = 200;
@@ -86,6 +90,7 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = Noise)
 		void GetNoiseValue(float x, float y, float& refNoiseValue);
+
 private:
 	void GenerateChunk();
 	void UpdateMesh();

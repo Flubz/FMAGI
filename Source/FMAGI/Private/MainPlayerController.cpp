@@ -56,11 +56,13 @@ void AMainPlayerController::AddChunk()
 
 			_chunksCords.Add(chunkPos);
 
-			AVoxel* chunk = Cast<AVoxel>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, _chunk, spawnTransform));
+			// AVoxel* chunk = Cast<AVoxel>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, _chunk, spawnTransform));
+			AVoxel* chunk = GetWorld()->SpawnActor<AVoxel>(_chunk, spawnTransform);
+
 			if (chunk != nullptr)
 			{
 				chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y, spawnTransform, _chunkSpawnProperties);
-				UGameplayStatics::FinishSpawningActor(chunk, spawnTransform);
+				// UGameplayStatics::FinishSpawningActor(chunk, spawnTransform);
 			}
 
 			_chunks.Add(chunk);

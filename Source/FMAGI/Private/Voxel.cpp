@@ -96,8 +96,17 @@ void AVoxel::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& tree
 		{
 			for (int z = 0; z < _csp._chunkZElements; z++)
 			{
+				int32 noiseIndex = x + (y * _csp._chunkLineElements);
+				int32 chunkIndex = noiseIndex + (z * _chunkLineElementsP2);
+
+				if (randomStream.FRand() < _chanceToSpawnGrass
+					&& z == (_csp._chunkZMaxHeight + 1) + noise[noiseIndex])
+				{
+					_chunkFields[chunkIndex] = -1;
+				}
+
 				if (randomStream.FRand() < _treeSpawnProperties._spawnPercentPerChunk
-					&& z == (_csp._chunkZMaxHeight + 1) + noise[x + (y * _csp._chunkLineElements)])
+					&& z == (_csp._chunkZMaxHeight + 1) + noise[noiseIndex])
 				{
 					treeCenters.Add(FIntVector(x, y, z));
 				}
@@ -352,6 +361,10 @@ void AVoxel::UpdateMesh()
 					elementNumber += triangleNum;
 					_meshSections[meshIndex].elementID += triangleNum;
 				}
+				else if (meshIndex == -1)
+				{
+					AddInstanceVoxel(FVector(x * _csp._voxelSize, y * _csp._voxelSize, (z * _csp._voxelSize) - _voxelSizeHalf));
+				}
 			}
 		}
 	}
@@ -370,4 +383,9 @@ void AVoxel::UpdateMesh()
 	{
 		_proceduralMeshComponent->SetMaterial(i, _materials[i]);
 	}
+}
+
+void AVoxel::AddInstanceVoxel_Implementation(FVector instanceLocation)
+{
+
 }
