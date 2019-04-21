@@ -2,8 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "Voxel.h"
 #include "ChunkSpawnProperties.h"
+#include "Chunk.h"
 #include "MainPlayerController.generated.h"
 
 UCLASS()
@@ -14,13 +14,13 @@ public:
 	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) FChunkSpawn _chunkSpawnProperties;
 	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) int32 _renderRange;
 	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) float _hitRange;
-	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) TSubclassOf<class AVoxel> _chunk;
+	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) TSubclassOf<class AChunk> _chunk;
 
 	UFUNCTION(BlueprintCallable) void UpdateVoxel(bool isAdding);
 
 private:
 	int32 _voxelSizeHalf;
-	TArray<AVoxel*> _chunks;
+	TArray<AChunk*> _chunks;
 	TArray<FVector2D> _chunksCords;
 
 	int32 _chunkSize;
