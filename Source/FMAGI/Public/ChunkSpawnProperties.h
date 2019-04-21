@@ -21,4 +21,3 @@ class FMAGI_API UChunkSpawnProperties : public UUserDefinedStruct
 {
 	GENERATED_BODY()
 };
-
