@@ -5,6 +5,7 @@
 #include "Materials/MaterialInterface.h"
 #include "ProceduralMeshComponent.h"
 #include "ChunkSpawnProperties.h"
+#include "Voxel.h"
 #include "Chunk.generated.h"
 
 struct FMeshSection
@@ -78,6 +79,8 @@ protected:
 		float _chanceToSpawnGrass = 0.01;
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		TArray<FOctaves> _octaves;
+	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
+		TArray<AVoxel*> _voxels;
 	UPROPERTY(Category = Tree, EditAnywhere, BlueprintReadOnly)
 		FTreeSpawnProperties _treeSpawnProperties;
 

@@ -2,6 +2,10 @@
 	"BuildId": "4212847",
 	"Modules": 
 	{
+<<<<<<< HEAD
 		"FMAGI": "UE4Editor-FMAGI-3199.dll"
+=======
+		"FMAGI": "UE4Editor-FMAGI-8423.dll"
+>>>>>>> develop
 	}
 }
