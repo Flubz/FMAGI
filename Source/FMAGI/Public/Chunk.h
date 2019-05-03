@@ -5,7 +5,7 @@
 #include "Materials/MaterialInterface.h"
 #include "ProceduralMeshComponent.h"
 #include "ChunkSpawnProperties.h"
-#include "Voxel.h"
+#include "NoExportTypes.h"
 #include "Chunk.generated.h"
 
 struct FMeshSection
@@ -53,6 +53,8 @@ public:
 		int32 _treeTrunkHeightMin = 3;
 	UPROPERTY(Category = TreeSpawnProperties, EditAnywhere, BlueprintReadWrite)
 		int32 _treeTrunkHeightMax = 6;
+	UPROPERTY(Category = TreeSpawnProperties, EditAnywhere, BlueprintReadWrite)
+		float _treeRadius = 2.8f;
 };
 
 UCLASS()
@@ -74,14 +76,12 @@ protected:
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		TArray<UMaterialInterface*>  _materials;
 	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
-		int32 _randomSeed = 0;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
-		float _chanceToSpawnGrass = 0.01;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
 		TArray<FOctaves> _octaves;
-	UPROPERTY(Category = Voxel, EditAnywhere, BlueprintReadOnly)
-		TArray<AVoxel*> _voxels;
-	UPROPERTY(Category = Tree, EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = Spawn, EditAnywhere, BlueprintReadOnly)
+		float _chanceToSpawnGrass = 0.01;
+	UPROPERTY(Category = Spawn, EditAnywhere, BlueprintReadOnly)
+		float _chanceToSpawnCrystal = 0.1f;
+	UPROPERTY(Category = Spawn, EditAnywhere, BlueprintReadOnly)
 		FTreeSpawnProperties _treeSpawnProperties;
 
 	UPROPERTY(Category = Voxel, VisibleAnywhere, BlueprintReadOnly)
@@ -102,7 +102,11 @@ private:
 	TArray<int32> _chunkFields;
 	UProceduralMeshComponent* _proceduralMeshComponent;
 	FChunkSpawn _csp;
-	void GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters, TArray<int32>& noise);
+	FRandomStream _randStream;
+	void GenerateTrees(TArray<FIntVector>& treeCenters, TArray<int32>& noise);
 	bool InRange(int32 value, int32 range) { return (value >= 0 && value < range); }
+	UFUNCTION(BlueprintCallable, Category = "Chunk") bool GetCanSpawnCrystal() { return FMath::FRand() < _chanceToSpawnCrystal; }
 };
+
+
 

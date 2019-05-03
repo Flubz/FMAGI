@@ -46,8 +46,8 @@ void AChunk::GenerateChunk()
 {
 	_chunkFields.SetNumUninitialized(_chunkTotalElements);
 	TArray<int32> noise = CalculateNoise();
+	_randStream = FRandomStream(_csp._randomSeed);
 
-	FRandomStream randStream = FRandomStream(_randomSeed);
 	TArray<FIntVector> treeCenters;
 
 	for (int32 x = 0; x < _csp._chunkLineElements; x++)
@@ -80,10 +80,10 @@ void AChunk::GenerateChunk()
 		}
 	}
 
-	GenerateTrees(randStream, treeCenters, noise);
+	if (_csp._generateTrees) GenerateTrees(treeCenters, noise);
 }
 
-void AChunk::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& treeCenters, TArray<int32>& noise)
+void AChunk::GenerateTrees(TArray<FIntVector>& treeCenters, TArray<int32>& noise)
 {
 	int32 treeX = _treeSpawnProperties._treeLeavesDimensions;
 	int32 treeY = _treeSpawnProperties._treeLeavesDimensions;
@@ -98,13 +98,13 @@ void AChunk::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& tree
 				int32 noiseIndex = x + (y * _csp._chunkLineElements);
 				int32 chunkIndex = noiseIndex + (z * _chunkLineElementsP2);
 
-				if (randomStream.FRand() < _chanceToSpawnGrass
+				if (_randStream.FRand() < _chanceToSpawnGrass
 					&& z == (_csp._chunkZMaxHeight + 1) + noise[noiseIndex])
 				{
 					_chunkFields[chunkIndex] = -1;
 				}
 
-				if (randomStream.FRand() < _treeSpawnProperties._spawnPercentPerChunk
+				if (_randStream.FRand() < _treeSpawnProperties._spawnPercentPerChunk
 					&& z == (_csp._chunkZMaxHeight + 1) + noise[noiseIndex])
 				{
 					treeCenters.Add(FIntVector(x, y, z));
@@ -115,10 +115,10 @@ void AChunk::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& tree
 
 	for (FIntVector treeCenter : treeCenters)
 	{
-		int32 randX = randomStream.RandRange(0, 2);
-		int32 randY = randomStream.RandRange(0, 2);
-		int32 randZ = randomStream.RandRange(0, 2);
-		int32 randHeight = randomStream.RandRange
+		int32 randX = FMath::RandRange(0, 2);
+		int32 randY = FMath::RandRange(0, 2);
+		int32 randZ = FMath::RandRange(0, 2);
+		int32 randHeight = FMath::RandRange
 		(_treeSpawnProperties._treeTrunkHeightMin, _treeSpawnProperties._treeTrunkHeightMax);
 
 		for (int32 x = -treeX; x < treeX + 1; x++)
@@ -132,9 +132,9 @@ void AChunk::GenerateTrees(FRandomStream& randomStream, TArray<FIntVector>& tree
 						InRange(z + treeCenter.Z, _csp._chunkZElements))
 					{
 						float radius = FVector(x * randX, y * randY, z * randZ).Size();
-						if (radius <= 2.8)
+						if (radius <= _treeSpawnProperties._treeRadius)
 						{
-							if (randomStream.FRand() < 0.5 || radius <= 1.4)
+							if (FMath::FRand() < 0.5 || radius <= 1.4)
 							{
 								_chunkFields[treeCenter.X + x +
 									(_csp._chunkLineElements * (treeCenter.Y + y)) +
@@ -172,8 +172,8 @@ TArray<int32> AChunk::CalculateNoise()
 			{
 				if (_octaves[o]._skip) continue;
 				float noiseValue = 0.0f;
-				xNoiseMult = ((_chunkXIndex * _csp._chunkLineElements) + x) * _octaves[o]._xMult;
-				yNoiseMult = ((_chunkYIndex * _csp._chunkLineElements) + y) * _octaves[o]._yMult;
+				xNoiseMult = (((_chunkXIndex + _csp._randomSeed) * _csp._chunkLineElements) + x) * _octaves[o]._xMult;
+				yNoiseMult = (((_chunkYIndex + _csp._randomSeed) * _csp._chunkLineElements) + y) * _octaves[o]._yMult;
 				noiseValue = USimplexNoiseBPLibrary::SimplexNoise2D(xNoiseMult, yNoiseMult);
 				noiseValue *= _octaves[o]._weight;
 				if (_octaves[o]._clamp)
@@ -360,7 +360,7 @@ void AChunk::UpdateMesh()
 					elementNumber += triangleNum;
 					_meshSections[meshIndex].elementID += triangleNum;
 				}
-				else if (meshIndex == -1)
+				else if (_csp._generateGrass && meshIndex == -1)
 				{
 					AddInstanceVoxel(FVector(x * _csp._voxelSize, y * _csp._voxelSize, (z * _csp._voxelSize) - _voxelSizeHalf));
 				}

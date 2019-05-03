@@ -9,11 +9,14 @@ struct FChunkSpawn
 {
 	GENERATED_USTRUCT_BODY()
 public:
-	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) int32 _chunkLineElements = 20;
-	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) int32 _chunkZElements = 80;
-	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) int32 _chunkZMaxHeight = 30;
-	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) int32 _voxelSize = 100;
-	UPROPERTY(Category = Chunk, EditAnywhere, BlueprintReadOnly) bool _voxelCollision = true;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) int32 _randomSeed = 0;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) int32 _chunkLineElements = 20;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) int32 _chunkZElements = 80;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) int32 _chunkZMaxHeight = 30;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) int32 _voxelSize = 100;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) bool _voxelCollision = true;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) bool _generateTrees = true;
+	UPROPERTY(Category = "Chunk", EditAnywhere, BlueprintReadOnly) bool _generateGrass = true;
 };
 
 UCLASS()

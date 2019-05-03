@@ -2,10 +2,6 @@
 	"BuildId": "4212847",
 	"Modules": 
 	{
-<<<<<<< HEAD
-		"SimplexNoise": "UE4Editor-SimplexNoise-9155.dll"
-=======
-		"SimplexNoise": "UE4Editor-SimplexNoise-1415.dll"
->>>>>>> develop
+		"SimplexNoise": "UE4Editor-SimplexNoise-528.dll"
 	}
 }
