@@ -56,14 +56,8 @@ void AMainPlayerController::AddChunk()
 
 			_chunksCords.Add(chunkPos);
 
-			// AVoxel* chunk = Cast<AVoxel>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, _chunk, spawnTransform));
-			AVoxel* chunk = GetWorld()->SpawnActor<AVoxel>(_chunk, spawnTransform);
-
-			if (chunk != nullptr)
-			{
-				chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y, spawnTransform, _chunkSpawnProperties);
-				// UGameplayStatics::FinishSpawningActor(chunk, spawnTransform);
-			}
+			AChunk* chunk = GetWorld()->SpawnActor<AChunk>(_chunk, spawnTransform);
+			chunk->SetSpawnProperties(chunkPos.X, chunkPos.Y, spawnTransform, _chunkSpawnProperties);
 
 			_chunks.Add(chunk);
 		}
@@ -124,7 +118,7 @@ void AMainPlayerController::UpdateVoxel(bool isAdding)
 			FVector hitOffsetChunkSize = hitOffsetVoxelHalf / _chunkSize;
 			FVector2D chunkCoords = FVector2D(UKismetMathLibrary::FFloor(hitOffsetChunkSize.X), UKismetMathLibrary::FFloor(hitOffsetChunkSize.Y));
 
-			AVoxel* targetChunk = _chunks[_chunksCords.Find(chunkCoords)];
+			AChunk* targetChunk = _chunks[_chunksCords.Find(chunkCoords)];
 			FVector voxelPos = ((targetChunk->GetActorLocation() * -1) + hitOffset) + voxelHalfVec;
 			targetChunk->SetVoxel(voxelPos, UKismetMathLibrary::Conv_BoolToInt(isAdding));
 		}
