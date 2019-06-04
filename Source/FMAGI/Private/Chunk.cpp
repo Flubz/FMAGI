@@ -79,7 +79,6 @@ void AChunk::GenerateChunk()
 			}
 		}
 	}
-
 	if (_csp._generateTrees) GenerateTrees(treeCenters, noise);
 }
 
