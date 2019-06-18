@@ -6,8 +6,8 @@
 void AMainPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	_chunkSize = _chunkSpawnProperties._chunkLineElements * _chunkSpawnProperties._voxelSize;
-	_chunkSizeHalf = _chunkSize / 1;
+	_chunkSize = _chunkSpawnProperties._chunkXYSize * _chunkSpawnProperties._voxelSize;
+	_chunkSizeHalf = _chunkSize / 2;
 	_voxelSizeHalf = _chunkSpawnProperties._voxelSize / 2;
 }
 

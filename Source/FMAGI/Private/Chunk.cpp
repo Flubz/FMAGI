@@ -26,8 +26,8 @@ void AChunk::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform
 
 	_csp = chunkSpawnProperties;
 
-	_chunkLineElementsP2 = _csp._chunkLineElements * _csp._chunkLineElements;
-	_chunkTotalElements = _chunkLineElementsP2 * _csp._chunkZElements;
+	_chunkXYSizeP2 = _csp._chunkXYSize * _csp._chunkXYSize;
+	_chunkTotalSize = _chunkXYSizeP2 * _csp._chunkZSize;
 	_voxelSizeHalf = _csp._voxelSize / 2;
 
 	FString str = "Voxel_" + FString::FromInt(_chunkXIndex) + "_" + FString::FromInt(_chunkYIndex);
@@ -44,37 +44,43 @@ void AChunk::SetSpawnProperties(int32 chunkXIndex, int32 chunkYIndex, FTransform
 
 void AChunk::GenerateChunk()
 {
-	_chunkFields.SetNumUninitialized(_chunkTotalElements);
+	_chunkVoxels.SetNumUninitialized(_chunkTotalSize);
 	TArray<int32> noise = CalculateNoise();
 	_randStream = FRandomStream(_csp._randomSeed);
 
 	TArray<FIntVector> treeCenters;
 
-	for (int32 x = 0; x < _csp._chunkLineElements; x++)
+	for (int32 x = 0; x < _csp._chunkXYSize; x++)
 	{
-		for (int32 y = 0; y < _csp._chunkLineElements; y++)
+		for (int32 y = 0; y < _csp._chunkXYSize; y++)
 		{
-			for (int32 z = 0; z < _csp._chunkZElements; z++)
+			for (int32 z = 0; z < _csp._chunkZSize; z++)
 			{
-				int32 noiseIndex = x + (y * _csp._chunkLineElements);
-				int32 chunkIndex = noiseIndex + (z * _chunkLineElementsP2);
-				int32 randChunkDepth = UKismetMathLibrary::RandomIntegerInRange(0, 2);
+				int32 noiseIndex = x + (y * _csp._chunkXYSize);
+				int32 chunkIndex = noiseIndex + (z * _chunkXYSizeP2);
+				// int32 randChunkDepth = UKismetMathLibrary::RandomIntegerInRange(0, 5);
+				int32 indexedChunkHeight = _csp._chunkGroundHeight + noise[noiseIndex];
 
-				if (z == (_csp._chunkZMaxHeight) + noise[noiseIndex])
+				// _chunkVoxels stores the voxels as ints.
+				// This should be refactored at some point #todo
+				// Z starts from the bottom of the mesh as 0
+				// If it is equal to indexedChunkHeight then it is "grass/ground"
+				if (z == (indexedChunkHeight))
 				{
-					_chunkFields[chunkIndex] = 11;
+					_chunkVoxels[chunkIndex] = 11;
 				}
-				else if (z == (_csp._chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
+				else if (z == (indexedChunkHeight - 1) || z == (indexedChunkHeight - 2))
 				{
-					_chunkFields[chunkIndex] = 12;
+					_chunkVoxels[chunkIndex] = 12;
 				}
-				else if (z < (_csp._chunkZMaxHeight - randChunkDepth) + noise[noiseIndex])
+				else if (z < (indexedChunkHeight))
 				{
-					_chunkFields[chunkIndex] = 13;
+					_chunkVoxels[chunkIndex] = 13;
 				}
+				// If its greater than all the previous values then it is 0 "air".
 				else
 				{
-					_chunkFields[chunkIndex] = 0;
+					_chunkVoxels[chunkIndex] = 0;
 				}
 			}
 		}
@@ -88,23 +94,23 @@ void AChunk::GenerateTrees(TArray<FIntVector>& treeCenters, TArray<int32>& noise
 	int32 treeY = _treeSpawnProperties._treeLeavesDimensions;
 	int32 treeZ = _treeSpawnProperties._treeLeavesDimensions;
 
-	for (int x = 2; x < _csp._chunkLineElements - 2; x++)
+	for (int x = 2; x < _csp._chunkXYSize - 2; x++)
 	{
-		for (int y = 2; y < _csp._chunkLineElements - 2; y++)
+		for (int y = 2; y < _csp._chunkXYSize - 2; y++)
 		{
-			for (int z = 0; z < _csp._chunkZElements; z++)
+			for (int z = 0; z < _csp._chunkZSize; z++)
 			{
-				int32 noiseIndex = x + (y * _csp._chunkLineElements);
-				int32 chunkIndex = noiseIndex + (z * _chunkLineElementsP2);
+				int32 noiseIndex = x + (y * _csp._chunkXYSize);
+				int32 chunkIndex = noiseIndex + (z * _chunkXYSizeP2);
 
 				if (_randStream.FRand() < _chanceToSpawnGrass
-					&& z == (_csp._chunkZMaxHeight + 1) + noise[noiseIndex])
+					&& z == (_csp._chunkGroundHeight + 1) + noise[noiseIndex])
 				{
-					_chunkFields[chunkIndex] = -1;
+					_chunkVoxels[chunkIndex] = -1;
 				}
 
 				if (_randStream.FRand() < _treeSpawnProperties._spawnPercentPerChunk
-					&& z == (_csp._chunkZMaxHeight + 1) + noise[noiseIndex])
+					&& z == (_csp._chunkGroundHeight + 1) + noise[noiseIndex])
 				{
 					treeCenters.Add(FIntVector(x, y, z));
 				}
@@ -126,18 +132,18 @@ void AChunk::GenerateTrees(TArray<FIntVector>& treeCenters, TArray<int32>& noise
 			{
 				for (int32 z = -treeZ; z < treeZ + 1; z++)
 				{
-					if (InRange(x + treeCenter.X, _csp._chunkLineElements) &&
-						InRange(y + treeCenter.Y, _csp._chunkLineElements) &&
-						InRange(z + treeCenter.Z, _csp._chunkZElements))
+					if (InRange(x + treeCenter.X, _csp._chunkXYSize) &&
+						InRange(y + treeCenter.Y, _csp._chunkXYSize) &&
+						InRange(z + treeCenter.Z, _csp._chunkZSize))
 					{
 						float radius = FVector(x * randX, y * randY, z * randZ).Size();
 						if (radius <= _treeSpawnProperties._treeRadius)
 						{
 							if (FMath::FRand() < 0.5 || radius <= 1.4)
 							{
-								_chunkFields[treeCenter.X + x +
-									(_csp._chunkLineElements * (treeCenter.Y + y)) +
-									(_chunkLineElementsP2 * (treeCenter.Z + z + randHeight))] = 1;
+								_chunkVoxels[treeCenter.X + x +
+									(_csp._chunkXYSize * (treeCenter.Y + y)) +
+									(_chunkXYSizeP2* (treeCenter.Z + z + randHeight))] = 1;
 							}
 						}
 					}
@@ -147,7 +153,7 @@ void AChunk::GenerateTrees(TArray<FIntVector>& treeCenters, TArray<int32>& noise
 
 		for (int32 h = 0; h < randHeight; h++)
 		{
-			_chunkFields[treeCenter.X + (treeCenter.Y * _csp._chunkLineElements) + ((treeCenter.Z + h) * _chunkLineElementsP2)] = 14;
+			_chunkVoxels[treeCenter.X + (treeCenter.Y * _csp._chunkXYSize) + ((treeCenter.Z + h) * _chunkXYSizeP2)] = 14;
 		}
 	}
 }
@@ -155,15 +161,15 @@ void AChunk::GenerateTrees(TArray<FIntVector>& treeCenters, TArray<int32>& noise
 TArray<int32> AChunk::CalculateNoise()
 {
 	TArray<int32> noiseArray;
-	noiseArray.SetNum(_chunkLineElementsP2);
+	noiseArray.SetNum(_chunkXYSizeP2);
 
 	float xNoiseMult = 0.0f;
 	float yNoiseMult = 0.0f;
 	int32 val = 0.0f;
 
-	for (int x = 0; x < _csp._chunkLineElements; x++)
+	for (int x = 0; x < _csp._chunkXYSize; x++)
 	{
-		for (int y = 0; y < _csp._chunkLineElements; y++)
+		for (int y = 0; y < _csp._chunkXYSize; y++)
 		{
 			float cumulativeNoiseValue = 0.0f;
 
@@ -171,8 +177,8 @@ TArray<int32> AChunk::CalculateNoise()
 			{
 				if (_octaves[o]._skip) continue;
 				float noiseValue = 0.0f;
-				xNoiseMult = (((_chunkXIndex + _csp._randomSeed) * _csp._chunkLineElements) + x) * _octaves[o]._xMult;
-				yNoiseMult = (((_chunkYIndex + _csp._randomSeed) * _csp._chunkLineElements) + y) * _octaves[o]._yMult;
+				xNoiseMult = (((_chunkXIndex + _csp._randomSeed) * _csp._chunkXYSize) + x) * _octaves[o]._xMult;
+				yNoiseMult = (((_chunkYIndex + _csp._randomSeed) * _csp._chunkXYSize) + y) * _octaves[o]._yMult;
 				noiseValue = USimplexNoiseBPLibrary::SimplexNoise2D(xNoiseMult, yNoiseMult);
 				noiseValue *= _octaves[o]._weight;
 				if (_octaves[o]._clamp)
@@ -183,7 +189,7 @@ TArray<int32> AChunk::CalculateNoise()
 			}
 
 			val = FMath::FloorToInt((cumulativeNoiseValue));
-			noiseArray[(y * _csp._chunkLineElements) + x] = val;
+			noiseArray[x + (y * _csp._chunkXYSize)] = val;
 		}
 	}
 	return noiseArray;
@@ -207,9 +213,9 @@ void AChunk::SetVoxel(FVector localPos, int32 value)
 	int32 x = localPos.X / _csp._voxelSize;
 	int32 y = localPos.Y / _csp._voxelSize;
 	int32 z = localPos.Z / _csp._voxelSize;
-	int32 index = x + (y * _csp._chunkLineElements) + (z * _chunkLineElementsP2);
+	int32 index = x + (y * _csp._chunkXYSize) + (z * _chunkXYSizeP2);
 
-	_chunkFields[index] = value;
+	_chunkVoxels[index] = value;
 
 	UpdateMesh();
 }
@@ -221,14 +227,14 @@ void AChunk::UpdateMesh()
 
 	int32 elementNumber = 0;
 
-	for (int32 x = 0; x < _csp._chunkLineElements; x++)
+	for (int32 x = 0; x < _csp._chunkXYSize; x++)
 	{
-		for (int32 y = 0; y < _csp._chunkLineElements; y++)
+		for (int32 y = 0; y < _csp._chunkXYSize; y++)
 		{
-			for (int32 z = 0; z < _csp._chunkZElements; z++)
+			for (int32 z = 0; z < _csp._chunkZSize; z++)
 			{
-				int32 index = x + (_csp._chunkLineElements * y) + (_chunkLineElementsP2 * z);
-				int32 meshIndex = _chunkFields[index];
+				int32 index = x + (_csp._chunkXYSize * y) + (_chunkXYSizeP2* z);
+				int32 meshIndex = _chunkVoxels[index];
 
 				if (meshIndex > 0)
 				{
@@ -245,14 +251,14 @@ void AChunk::UpdateMesh()
 					int triangleNum = 0;
 					for (int i = 0; i < 6; i++)
 					{
-						int newIndex = index + bMask[i].X + (bMask[i].Y * _csp._chunkLineElements) + (bMask[i].Z * _chunkLineElementsP2);
+						int newIndex = index + bMask[i].X + (bMask[i].Y * _csp._chunkXYSize) + (bMask[i].Z * _chunkXYSizeP2);
 						bool flag = false;
 
 						if (meshIndex >= 20) flag = true;
-						else if ((x + bMask[i].X < _csp._chunkLineElements) && (x + bMask[i].X >= 0) && (y + bMask[i].Y < _csp._chunkLineElements) && (y + bMask[i].Y >= 0))
+						else if ((x + bMask[i].X < _csp._chunkXYSize) && (x + bMask[i].X >= 0) && (y + bMask[i].Y < _csp._chunkXYSize) && (y + bMask[i].Y >= 0))
 						{
-							if (newIndex < _chunkFields.Num() && newIndex >= 0)
-								if (_chunkFields[newIndex] < 10) flag = true;
+							if (newIndex < _chunkVoxels.Num() && newIndex >= 0)
+								if (_chunkVoxels[newIndex] < 10) flag = true;
 						}
 						else flag = true;
 						if (flag)
@@ -333,7 +339,7 @@ void AChunk::UpdateMesh()
 									true, true, true
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals5, ARRAY_COUNT(bNormals4));
+								mNormals.Append(bNormals4, ARRAY_COUNT(bNormals4));
 								break;
 							}
 							case 5:
@@ -346,7 +352,7 @@ void AChunk::UpdateMesh()
 									false, false, true
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals4, ARRAY_COUNT(bNormals5));
+								mNormals.Append(bNormals5, ARRAY_COUNT(bNormals5));
 								break;
 							}
 							}

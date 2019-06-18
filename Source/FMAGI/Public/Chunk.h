@@ -96,10 +96,10 @@ private:
 	void SetVerticies(int32 xVS, int32 yVS, int32 zVS, TArray<FVector>& verticies, bool posArray[]);
 	int32 GetVoxelSizeHalf(int element, bool positiveArray[]);
 
-	int32 _chunkTotalElements;
-	int32 _chunkLineElementsP2;
+	int32 _chunkTotalSize;
+	int32 _chunkXYSizeP2;
 	int32 _voxelSizeHalf;
-	TArray<int32> _chunkFields;
+	TArray<int32> _chunkVoxels;
 	UProceduralMeshComponent* _proceduralMeshComponent;
 	FChunkSpawn _csp;
 	FRandomStream _randStream;
