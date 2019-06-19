@@ -4,15 +4,16 @@
 #include "NoExportTypes.h"
 #include "SimplexNoiseBPLibrary.h"
 
-const int32 bTriangles[] = { 2, 1, 0, 0, 3, 2 };
-const FVector2D bUVs[] = { FVector2D(0.000000, 0.000000), FVector2D(0.000000, 1.000000), FVector2D(1.000000, 1.000000), FVector2D(1.000000, 0.000000) };
-const FVector bNormals0[] = { FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1) };
-const FVector bNormals1[] = { FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1) };
-const FVector bNormals2[] = { FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0) };
-const FVector bNormals3[] = { FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0) };
-const FVector bNormals4[] = { FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0) };
-const FVector bNormals5[] = { FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0) };
-const FVector bMask[] = { FVector(0.000000, 0.000000, 1.000000), FVector(0.000000, 0.000000, -1.000000), FVector(0.000000, 1.000000, 0.000000), FVector(0.000000, -1.000000, 0.000000), FVector(1.000000, 0.000000, 0.000000), FVector(-1.000000, 0.000000, 0.000000) };
+const int32 TRIANGLES[] = { 2, 1, 0, 0, 3, 2 };
+const FVector2D UVS[] = { FVector2D(0.000000, 0.000000), FVector2D(0.000000, 1.000000), FVector2D(1.000000, 1.000000), FVector2D(1.000000, 0.000000) };
+const FVector NORMALS0[] = { FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1), FVector(0, 0, 1) };
+const FVector NORMALS1[] = { FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1), FVector(0, 0, -1) };
+const FVector NORMALS2[] = { FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0), FVector(0, 1, 0) };
+const FVector NORMALS3[] = { FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0), FVector(0, -1, 0) };
+const FVector NORMALS4[] = { FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0), FVector(1, 0, 0) };
+const FVector NORMALS5[] = { FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0), FVector(-1, 0, 0) };
+const FVector MASK[] = { FVector(0.000000, 0.000000, 1.000000), FVector(0.000000, 0.000000, -1.000000), FVector(0.000000, 1.000000, 0.000000),
+FVector(0.000000, -1.000000, 0.000000), FVector(1.000000, 0.000000, 0.000000), FVector(-1.000000, 0.000000, 0.000000) };
 
 AChunk::AChunk()
 {
@@ -234,41 +235,43 @@ void AChunk::UpdateMesh()
 			for (int32 z = 0; z < _csp._chunkZSize; z++)
 			{
 				int32 index = x + (_csp._chunkXYSize * y) + (_chunkXYSizeP2* z);
-				int32 meshIndex = _chunkVoxels[index];
+				int32 voxelIndex = _chunkVoxels[index];
 
-				if (meshIndex > 0)
+				// if 0, its air.
+				if (voxelIndex > 0)
 				{
-					meshIndex--;
+					voxelIndex--;
 
-					TArray<FVector>& mVerticies = _meshSections[meshIndex].Verticies;
-					TArray<int32>& mTriangles = _meshSections[meshIndex].Triangles;
-					TArray<FVector>& mNormals = _meshSections[meshIndex].Normals;
-					TArray<FVector2D>& mUVS = _meshSections[meshIndex].UVS;
-					TArray<FColor>& mVertexColors = _meshSections[meshIndex].VertexColors;
-					TArray<FProcMeshTangent>& mTangents = _meshSections[meshIndex].Tangents;
-					int32 elementID = _meshSections[meshIndex].elementID;
+					TArray<FVector>& mVerticies = _meshSections[voxelIndex].Verticies;
+					TArray<int32>& mTriangles = _meshSections[voxelIndex].Triangles;
+					TArray<FVector>& mNormals = _meshSections[voxelIndex].Normals;
+					TArray<FVector2D>& mUVS = _meshSections[voxelIndex].UVS;
+					TArray<FColor>& mVertexColors = _meshSections[voxelIndex].VertexColors;
+					TArray<FProcMeshTangent>& mTangents = _meshSections[voxelIndex].Tangents;
+					int32 elementID = _meshSections[voxelIndex].elementID;
 
 					int triangleNum = 0;
 					for (int i = 0; i < 6; i++)
 					{
-						int newIndex = index + bMask[i].X + (bMask[i].Y * _csp._chunkXYSize) + (bMask[i].Z * _chunkXYSizeP2);
+						int newIndex = index + MASK[i].X + (MASK[i].Y * _csp._chunkXYSize) + (MASK[i].Z * _chunkXYSizeP2);
 						bool flag = false;
 
-						if (meshIndex >= 20) flag = true;
-						else if ((x + bMask[i].X < _csp._chunkXYSize) && (x + bMask[i].X >= 0) && (y + bMask[i].Y < _csp._chunkXYSize) && (y + bMask[i].Y >= 0))
+						if (voxelIndex >= 20) { flag = true; }
+						else if ((x + MASK[i].X < _csp._chunkXYSize) && (x + MASK[i].X >= 0) && (y + MASK[i].Y < _csp._chunkXYSize) && (y + MASK[i].Y >= 0))
 						{
 							if (newIndex < _chunkVoxels.Num() && newIndex >= 0)
 								if (_chunkVoxels[newIndex] < 10) flag = true;
 						}
 						else flag = true;
+
 						if (flag)
 						{
-							mTriangles.Add(bTriangles[0] + triangleNum + elementID);
-							mTriangles.Add(bTriangles[1] + triangleNum + elementID);
-							mTriangles.Add(bTriangles[2] + triangleNum + elementID);
-							mTriangles.Add(bTriangles[3] + triangleNum + elementID);
-							mTriangles.Add(bTriangles[4] + triangleNum + elementID);
-							mTriangles.Add(bTriangles[5] + triangleNum + elementID);
+							mTriangles.Add(TRIANGLES[0] + triangleNum + elementID);
+							mTriangles.Add(TRIANGLES[1] + triangleNum + elementID);
+							mTriangles.Add(TRIANGLES[2] + triangleNum + elementID);
+							mTriangles.Add(TRIANGLES[3] + triangleNum + elementID);
+							mTriangles.Add(TRIANGLES[4] + triangleNum + elementID);
+							mTriangles.Add(TRIANGLES[5] + triangleNum + elementID);
 							triangleNum += 4;
 
 							int32 xVS = x * _csp._voxelSize;
@@ -287,7 +290,7 @@ void AChunk::UpdateMesh()
 									true, true, true
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals0, ARRAY_COUNT(bNormals0));
+								mNormals.Append(NORMALS0, ARRAY_COUNT(NORMALS0));
 								break;
 							}
 							case 1:
@@ -300,7 +303,7 @@ void AChunk::UpdateMesh()
 									true, true, false
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals1, ARRAY_COUNT(bNormals1));
+								mNormals.Append(NORMALS1, ARRAY_COUNT(NORMALS1));
 								break;
 							}
 							case 2:
@@ -313,7 +316,7 @@ void AChunk::UpdateMesh()
 									false, true, true
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals2, ARRAY_COUNT(bNormals2));
+								mNormals.Append(NORMALS2, ARRAY_COUNT(NORMALS2));
 								break;
 							}
 							case 3:
@@ -326,7 +329,7 @@ void AChunk::UpdateMesh()
 									true, false, true
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals3, ARRAY_COUNT(bNormals3));
+								mNormals.Append(NORMALS3, ARRAY_COUNT(NORMALS3));
 								break;
 							}
 							case 4:
@@ -339,7 +342,7 @@ void AChunk::UpdateMesh()
 									true, true, true
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals4, ARRAY_COUNT(bNormals4));
+								mNormals.Append(NORMALS4, ARRAY_COUNT(NORMALS4));
 								break;
 							}
 							case 5:
@@ -352,20 +355,20 @@ void AChunk::UpdateMesh()
 									false, false, true
 								};
 								SetVerticies(xVS, yVS, zVS, mVerticies, posArray);
-								mNormals.Append(bNormals5, ARRAY_COUNT(bNormals5));
+								mNormals.Append(NORMALS5, ARRAY_COUNT(NORMALS5));
 								break;
 							}
 							}
 
-							mUVS.Append(bUVs, ARRAY_COUNT(bUVs));
+							mUVS.Append(UVS, ARRAY_COUNT(UVS));
 							FColor color = FColor(255, 255, 255, i);
 							mVertexColors.Add(color); mVertexColors.Add(color); mVertexColors.Add(color); mVertexColors.Add(color);
 						}
 					}
 					elementNumber += triangleNum;
-					_meshSections[meshIndex].elementID += triangleNum;
+					_meshSections[voxelIndex].elementID += triangleNum;
 				}
-				else if (_csp._generateGrass && meshIndex == -1)
+				else if (_csp._generateGrass && voxelIndex == -1)
 				{
 					AddInstanceVoxel(FVector(x * _csp._voxelSize, y * _csp._voxelSize, (z * _csp._voxelSize) - _voxelSizeHalf));
 				}
